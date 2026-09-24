@@ -1,0 +1,6 @@
+rank	commit	time_seconds	val_bpb	core	memory_gb	status	description	date	contributors
+0	228791f	300	1.010783		44.0	keep	baseline on H100	2026-09-24	@irom77
+1	a27430b	300	1.005539		44.0	keep	5% learning-rate warmup	2026-09-24	@irom77
+2	65adfe4	300	1.004616		44.0	keep	10% learning-rate warmup	2026-09-24	@irom77
+3	17219f5	300	1.013795		44.0	discard	15% learning-rate warmup regressed	2026-09-24	@irom77
+4	446326e	300	1.015563		44.0	discard	20% learning-rate warmup regressed	2026-09-24	@irom77

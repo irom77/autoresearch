@@ -24,7 +24,7 @@ Each experiment follows the same sequence:
 4. Extract `val_bpb`, runtime, token count, MFU, and peak VRAM from the log.
 5. Compare against the current best result.
 6. Keep an improvement; revert a regression or failed run.
-7. Add the result to `results.tsv` and update this runbook.
+7. Add the detailed result to `results.tsv`, update `leaderboard.tsv`, and update this runbook.
 
 ### Planned search areas
 
@@ -45,6 +45,31 @@ The evaluation harness in `prepare.py` is the source of truth and must not be ch
 - No crash or out-of-memory failure.
 - Peak VRAM remains within the H100's 80 GB capacity.
 - The change is simple enough to justify its improvement.
+
+## Autoresearch leaderboard
+
+This table follows nanochat's [Time-to-GPT-2 Leaderboard](https://github.com/irom77/nanochat/blob/master/README_original.md)
+format where it is useful: each row identifies the run, metric, change, date,
+commit, and contributor. The entries below are **not** official nanochat
+time-to-GPT-2 results. Autoresearch currently runs a fixed 300-second,
+single-GPU experiment and reports `val_bpb`; it does not yet measure DCLM CORE
+or the wall-clock time to exceed the GPT-2 CORE score. `time` therefore means
+the fixed training budget, not time-to-GPT-2. [`leaderboard.tsv`](leaderboard.tsv)
+is the machine-readable source for this table; [`results.tsv`](results.tsv)
+retains the detailed experiment record.
+
+| # | time | val_bpb | CORE | Description | Date | Commit | Contributors |
+|---:|---:|---:|---:|---|---|---|---|
+| 0 | 300 s | 1.010783 | — | H100 baseline | Sep 24 2026 | `228791f` | @irom77 |
+| 1 | 300 s | 1.005539 | — | 5% learning-rate warmup | Sep 24 2026 | `a27430b` | @irom77 |
+| 2 | 300 s | **1.004616** | — | 10% learning-rate warmup; current best | Sep 24 2026 | `65adfe4` | @irom77 |
+| 3 | 300 s | 1.013795 | — | 15% learning-rate warmup; discarded | Sep 24 2026 | `17219f5` | @irom77 |
+| 4 | 300 s | 1.015563 | — | 20% learning-rate warmup; discarded | Sep 24 2026 | `446326e` | @irom77 |
+
+Ranking is by lower `val_bpb` among valid runs. When a compatible nanochat
+evaluation is available, add its CORE score and retain the same run identity;
+do not substitute CORE for `val_bpb` or compare this single-GPU table directly
+with nanochat's 8×H100 leaderboard.
 
 ### Stopping and finalization
 
@@ -214,13 +239,9 @@ ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
 
 ## Experiment history
 
-| Commit | Change | Result |
-|---|---|---|
-| `228791f` | Baseline, H100 | `val_bpb=1.010783`, peak VRAM `44.0 GB` |
-| `a27430b` | Add 5% learning-rate warmup | `val_bpb=1.005539`, peak VRAM `44.0 GB`; keep |
-| `65adfe4` | Increase learning-rate warmup to 10% | `val_bpb=1.004616`, peak VRAM `44.0 GB`; keep |
-| `17219f5` | Increase learning-rate warmup to 15% | `val_bpb=1.013795`; discard and restore `65adfe4` |
-| `446326e` | Increase learning-rate warmup to 20% | `val_bpb=1.015563`; discard and restore `65adfe4` |
+The detailed machine-readable history is in [`results.tsv`](results.tsv); the
+summary leaderboard above is the human-facing view. Peak VRAM was `44.0 GB`
+for all five recorded runs.
 
 ## Checkpoints and Hugging Face publishing
 

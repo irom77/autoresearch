@@ -6,7 +6,7 @@
 - For deferred chat or nanochat evaluation work, follow [TODO.md](TODO.md).
 - Keep the daily experiment window within the user’s stated budget; check the deadline before starting a run.
 - Use one focused change per experiment. Keep `prepare.py` and the evaluation harness unchanged.
-- Record the commit, `val_bpb`, runtime, tokens, MFU, and peak VRAM in `results.tsv` and `README.md`.
+- Record the commit, `val_bpb`, runtime, tokens, MFU, and peak VRAM in `results.tsv`; update the nanochat-style summary in `leaderboard.tsv` and `README.md`.
 
 ## RunPod workflow
 
