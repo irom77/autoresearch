@@ -286,10 +286,11 @@ uv run prepare.py
 
 Copy `~/.cache/autoresearch/tokenizer/tokenizer.pkl` locally, verify its vocabulary
 size is 8,192, and upload it to the Hub as `tokenizer/tokenizer.pkl` in
-`niuk77/autoresearch`. Use nanochat revision `e85db6b`, which matches the uploaded
-native checkpoint. The current H100 pod no longer exists; provision a new pod and
-run the normal setup/monitoring steps if GPU inference or additional experiments
-are needed.
+`niuk77/autoresearch`. The repository now includes the pinned compatibility layer
+under `vendor/nanochat_compat/`, copied from nanochat revision `e85db6b`; use its
+`load_model.py` loader for the exported native checkpoint. The current H100 pod no
+longer exists; provision a new pod and run the normal setup/monitoring steps if
+GPU inference or additional experiments are needed.
 
 ### Pause and resume later
 

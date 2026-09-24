@@ -3,6 +3,7 @@
 ## Before running
 
 - Read [README.md](README.md) for the current RunPod status, roadmap, recovery, and monitoring commands.
+- For deferred chat or nanochat evaluation work, follow [TODO.md](TODO.md).
 - Keep the daily experiment window within the user’s stated budget; check the deadline before starting a run.
 - Use one focused change per experiment. Keep `prepare.py` and the evaluation harness unchanged.
 - Record the commit, `val_bpb`, runtime, tokens, MFU, and peak VRAM in `results.tsv` and `README.md`.
