@@ -21,3 +21,8 @@ dev/
 
 # Results file
 results.tsv
+
+# Trained model artifacts
+checkpoints/
+nanochat_export/
+runs/

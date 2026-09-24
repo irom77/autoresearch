@@ -1,92 +1,413 @@
-# autoresearch
+# RunPod GPU Runbook
 
-![teaser](progress.png)
+> Original project documentation: [PROJECT_README.md](PROJECT_README.md)
 
-*One day, frontier AI research used to be done by meat computers in between eating, sleeping, having other fun, and synchronizing once in a while using sound wave interconnect in the ritual of "group meeting". That era is long gone. Research is now entirely the domain of autonomous swarms of AI agents running across compute cluster megastructures in the skies. The agents claim that we are now in the 10,205th generation of the code base, in any case no one could tell if that's right or wrong as the "code" is now a self-modifying binary that has grown beyond human comprehension. This repo is the story of how it all began. -@karpathy, March 2026*.
 
-The idea: give an AI agent a small but real LLM training setup and let it experiment autonomously overnight. It modifies the code, trains for 5 minutes, checks if the result improved, keeps or discards, and repeats. You wake up in the morning to a log of experiments and (hopefully) a better model. The training code here is a simplified single-GPU implementation of [nanochat](https://github.com/karpathy/nanochat). The core idea is that you're not touching any of the Python files like you normally would as a researcher. Instead, you are programming the `program.md` Markdown files that provide context to the AI agents and set up your autonomous research org. The default `program.md` in this repo is intentionally kept as a bare bones baseline, though it's obvious how one would iterate on it over time to find the "research org code" that achieves the fastest research progress, how you'd add more agents to the mix, etc. A bit more context on this project is here in this [tweet](https://x.com/karpathy/status/2029701092347630069) and [this tweet](https://x.com/karpathy/status/2031135152349524125).
+This repository is running autoresearch experiments on a RunPod H100. The best
+benchmark result is `val_bpb=1.004616` from commit `65adfe4`. The pod was
+stopped and removed to protect the remaining RunPod balance.
 
-## How it works
+## Roadmap and goals
 
-The repo is deliberately kept small and only really has three files that matter:
+### Primary goal
 
-- **`prepare.py`** — fixed constants, one-time data prep (downloads training data, trains a BPE tokenizer), and runtime utilities (dataloader, evaluation). Not modified.
-- **`train.py`** — the single file the agent edits. Contains the full GPT model, optimizer (Muon + AdamW), and training loop. Everything is fair game: architecture, hyperparameters, optimizer, batch size, etc. **This file is edited and iterated on by the agent**.
-- **`program.md`** — baseline instructions for one agent. Point your agent here and let it go. **This file is edited and iterated on by the human**.
+Minimize `val_bpb` (validation bits per byte). Lower is better. The current best
+result is `1.004616` from commit `65adfe4` with 10% learning-rate warmup.
 
-By design, training runs for a **fixed 5-minute time budget** (wall clock, excluding startup/compilation), regardless of the details of your compute. The metric is **val_bpb** (validation bits per byte) — lower is better, and vocab-size-independent so architectural changes are fairly compared.
+### Experiment loop
 
-If you are new to neural networks, this ["Dummy's Guide"](https://x.com/hooeem/status/2030720614752039185) looks pretty good for a lot more context.
+Each experiment follows the same sequence:
 
-## Quick start
+1. Choose one focused change to `train.py`.
+2. Commit the change on the remote branch `autoresearch/sep24-gpu`.
+3. Run `uv run train.py` in a detached screen session for the fixed 300-second budget.
+4. Extract `val_bpb`, runtime, token count, MFU, and peak VRAM from the log.
+5. Compare against the current best result.
+6. Keep an improvement; revert a regression or failed run.
+7. Add the result to `results.tsv` and update this runbook.
 
-**Requirements:** A single NVIDIA GPU (tested on H100), Python 3.10+, [uv](https://docs.astral.sh/uv/).
+### Planned search areas
+
+The initial search is intentionally incremental:
+
+- Learning-rate warmup: 15%, then 20%, or revert if the trend stops improving.
+- Attention window pattern: compare the current `SSSL` pattern with `L`.
+- Optimizer rates: controlled changes to `MATRIX_LR`, `EMBEDDING_LR`, and `UNEMBEDDING_LR`.
+- Optimizer regularization: weight decay and beta values.
+- Model depth/width only after optimizer and schedule experiments plateau.
+
+Only one major variable should change per experiment so results remain attributable.
+The evaluation harness in `prepare.py` is the source of truth and must not be changed.
+
+### Success criteria
+
+- Lower `val_bpb` than the current best.
+- No crash or out-of-memory failure.
+- Peak VRAM remains within the H100's 80 GB capacity.
+- The change is simple enough to justify its improvement.
+
+### Stopping and finalization
+
+Continue while experiments produce useful improvements and the two-hour daily
+window remains available. Stop before `2026-09-24 16:54:51 UTC`, when progress
+plateaus, or when the human requests a stop. Before stopping:
+
+1. Confirm the best commit and copy its logs/results locally.
+2. Ensure `results.tsv` and this roadmap reflect the final state.
+3. Remove pod `2dgw5717mv8ypw` to stop the `$3.49/hr` charge.
+
+## Current pod
+
+- Pod name: `autoresearch-gpu`
+- Pod ID: `2dgw5717mv8ypw`
+- GPU: NVIDIA H100 80GB HBM3
+- GPU memory: 81,559 MiB
+- RunPod hourly rate at creation: `$3.49/hr`
+- Pod state: `removed` (billing stopped at `2026-09-24 16:33:57 UTC`)
+- SSH host: `103.207.149.105`
+- SSH port: `19547` (ports may change when the pod resumes)
+- SSH key: `/home/irom/.runpod/ssh/runpodctl-ssh-key`
+- Project directory: `/workspace/autoresearch`
+- Baseline session: `baseline`
+- Baseline log: `/workspace/autoresearch/baseline.log`
+- Experiment branch: `autoresearch/sep24-gpu`
+- Current experiment session: `checkpoint_best2` (completed)
+- Current experiment log: `/workspace/autoresearch/experiment4.log`
+- Current branch state: best commit `65adfe4`; checkpoint trial completed
+- Experiment window started: `2026-09-24 14:54:51 UTC`
+- Experiment time limit today: `2 hours` (`2026-09-24 16:54:51 UTC`)
+- Approximate experiment time used today: `~1 hour 39 minutes`; pod stopped before the 2-hour limit
+
+## Cost choice
+
+The live `runpodctl gpu list` check showed these relevant rates:
+
+| GPU | VRAM | Community rate | Secure rate | Practical result here |
+|---|---:|---:|---:|---|
+| A100 SXM | 80 GB | `$1.39/hr` | `$1.59/hr` | Cheapest suitable unmodified baseline; availability/host storage failed during allocation |
+| H100 SXM | 80 GB | `$2.69/hr` | `$3.49/hr` | Current pod; reference-class GPU for this repo |
+| RTX 6000 Ada | 48 GB | `$0.74/hr` | `$0.84/hr` | Cheaper, but the default baseline OOMed during `torch.compile` |
+| RTX A6000 | 48 GB | `$0.33/hr` | `$0.53/hr` | Cheaper, but likely insufficient for the default baseline without reducing batch size/model settings |
+
+Therefore, H100 is not the cheapest option. A100 80 GB is the cheapest option
+that should support the default configuration without changing the experiment, but
+the available A100 hosts failed before startup with `no space left on device`.
+The current H100 costs `$3.49/hr` at its selected secure rate. Rates and availability
+are dynamic; re-run `runpodctl gpu list` before switching pods.
+
+RunPod IPs and ports can change if the pod is recreated. Get the current values with:
 
 ```bash
+runpodctl pod list
+runpodctl ssh info 2dgw5717mv8ypw
+```
 
-# 1. Install uv project manager (if you don't already have it)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+Always run `runpodctl ssh info` after starting or resuming the pod. The SSH port
+changed from `12074` to `19547` when this pod was resumed.
 
-# 2. Install dependencies
-uv sync
+## Quick monitoring commands for every experiment
 
-# 3. Download data and train tokenizer (one-time, ~2 min)
-uv run prepare.py
+Set `EXPERIMENT` to the screen/log name you want to inspect. This works for
+`experiment1`, `experiment2`, and future sessions such as `experiment3`.
 
-# 4. Manually run a single training experiment (~5 min)
+```bash
+# Choose one: experiment1, experiment2, experiment3, ...
+EXPERIMENT=experiment2
+
+# Follow experiment output
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  "tail -f /workspace/autoresearch/${EXPERIMENT}.log"
+
+# Watch GPU utilization and VRAM
+ssh -t -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  'watch -n 1 nvidia-smi'
+
+# Check process/session status
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  "screen -ls; ps -ef | grep -E '(${EXPERIMENT}|train.py)' | grep -v grep || true"
+
+# Print final metrics after completion
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  "grep -E '^(val_bpb|training_seconds|total_seconds|peak_vram_mb|mfu_percent|total_tokens_M|num_steps):' /workspace/autoresearch/${EXPERIMENT}.log"
+```
+
+For the existing runs specifically:
+
+```bash
+EXPERIMENT=experiment1  # completed; best result so far: val_bpb=1.005539
+EXPERIMENT=experiment2  # latest run
+```
+
+## Connect with SSH
+
+From the repository directory on the local machine:
+
+```bash
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key \
+  -p 19547 \
+  -o StrictHostKeyChecking=no \
+  root@103.207.149.105
+```
+
+Or use the command printed by `runpodctl ssh info`.
+
+## Monitor the baseline
+
+Check the latest training output without opening the interactive session:
+
+```bash
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  'tail -f /workspace/autoresearch/baseline.log'
+```
+
+Check whether the detached session and Python process are still alive:
+
+```bash
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  "screen -ls; ps -ef | grep -E 'train.py' | grep -v grep || true"
+```
+
+Monitor GPU utilization and memory:
+
+```bash
+ssh -t -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  'watch -n 1 nvidia-smi'
+```
+
+A compact one-shot GPU check:
+
+```bash
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  'nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total --format=csv,noheader'
+```
+
+The baseline is configured by the project to run for a fixed 300-second training
+budget, excluding startup and compilation. When it finishes, extract the metrics:
+
+```bash
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  "grep -E '^(val_bpb|training_seconds|total_seconds|peak_vram_mb|mfu_percent|total_tokens_M|num_steps|num_params_M|depth):' /workspace/autoresearch/baseline.log"
+```
+
+## Monitor a named experiment
+
+The same commands apply to the active experiment log:
+
+```bash
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  'tail -f /workspace/autoresearch/<experiment-name>.log'
+```
+
+Extract completed experiment metrics:
+
+```bash
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  "grep -E '^(val_bpb|training_seconds|total_seconds|peak_vram_mb|mfu_percent|total_tokens_M|num_steps|num_params_M|depth):' /workspace/autoresearch/<experiment-name>.log"
+```
+
+View the experiment history:
+
+```bash
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  'cd /workspace/autoresearch && git log --oneline --decorate -5 && cat results.tsv'
+```
+
+## Experiment history
+
+| Commit | Change | Result |
+|---|---|---|
+| `228791f` | Baseline, H100 | `val_bpb=1.010783`, peak VRAM `44.0 GB` |
+| `a27430b` | Add 5% learning-rate warmup | `val_bpb=1.005539`, peak VRAM `44.0 GB`; keep |
+| `65adfe4` | Increase learning-rate warmup to 10% | `val_bpb=1.004616`, peak VRAM `44.0 GB`; keep |
+| `17219f5` | Increase learning-rate warmup to 15% | `val_bpb=1.013795`; discard and restore `65adfe4` |
+| `446326e` | Increase learning-rate warmup to 20% | `val_bpb=1.015563`; discard and restore `65adfe4` |
+
+## Checkpoints and Hugging Face publishing
+
+Current training code saves a candidate checkpoint after each completed run:
+
+```text
+/workspace/autoresearch/checkpoints/candidate.pt
+```
+
+The checkpoint contains model weights, model configuration, `val_bpb`, commit,
+runtime, token, and memory metadata. Promote and publish a candidate only when it
+strictly improves the local best:
+
+```bash
+export HF_REPO_ID=niuk77/autoresearch
+export HF_TOKEN=<your Hugging Face write token>
+export AUTORESEARCH_COMMIT=$(git rev-parse --short HEAD)
+export AUTORESEARCH_PUBLISH=1
 uv run train.py
 ```
 
-If the above commands all work ok, your setup is working and you can go into autonomous research mode.
+Or publish an existing candidate explicitly:
 
-## Running the agent
-
-Simply spin up your Claude/Codex or whatever you want in this repo (and disable all permissions), then you can prompt something like:
-
-```
-Hi have a look at program.md and let's kick off a new experiment! let's do the setup first.
+```bash
+HF_REPO_ID=niuk77/autoresearch \
+HF_TOKEN=<your Hugging Face write token> \
+uv run publish_best.py --checkpoint checkpoints/candidate.pt
 ```
 
-The `program.md` file is essentially a super lightweight "skill".
+The publisher creates the model repository if needed and uploads `best.pt` and
+`metadata.json`. Worse or equal candidates are skipped, so the Hugging Face repo
+always remains at the best known `val_bpb`. If no `HF_TOKEN` is configured, the
+best checkpoint is still saved locally under `checkpoints/best.pt`; upload it later
+with the command above. Never commit the token or place it in this runbook.
 
-## Project structure
+### Final checkpoint status for 2026-09-24
 
+- The checkpoint artifact is `checkpoints/best.pt` (about 159 MB).
+- The checkpoint-producing rerun measured `val_bpb=1.012760`; it is preserved as
+  the best saved checkpoint from this wrap-up, but it does not replace the better
+  benchmark score `1.004616` recorded for commit `65adfe4`.
+- Hugging Face publication did not occur because `HF_TOKEN` was absent. Configure
+  a Hugging Face write token in a future pod session, then run the explicit publish
+  command above; it will create `niuk77/autoresearch` and replace the remote
+  `best.pt` only for a strict improvement.
+- The local copy is in `checkpoints/`; this directory is ignored by git.
+- After the session, the local checkpoint and metadata were uploaded to
+  `https://huggingface.co/niuk77/autoresearch`, and the model card was added.
+
+### Deferred tokenizer recovery
+
+The model uses a custom 8,192-token tokenizer. The original tokenizer cache was
+not copied before the pod was removed, and the pod could not be restarted because
+RunPod had no available H100 on that host. Do not use nanochat's default tokenizer
+with this model.
+
+When budget is available, create a new pod or use a local machine and run:
+
+```bash
+cd /workspace/autoresearch
+uv run prepare.py
 ```
-prepare.py      — constants, data prep + runtime utilities (do not modify)
-train.py        — model, optimizer, training loop (agent modifies this)
-program.md      — agent instructions
-pyproject.toml  — dependencies
+
+Copy `~/.cache/autoresearch/tokenizer/tokenizer.pkl` locally, verify its vocabulary
+size is 8,192, and upload it to the Hub as `tokenizer/tokenizer.pkl` in
+`niuk77/autoresearch`. Use nanochat revision `e85db6b`, which matches the uploaded
+native checkpoint. The current H100 pod no longer exists; provision a new pod and
+run the normal setup/monitoring steps if GPU inference or additional experiments
+are needed.
+
+### Pause and resume later
+
+The pod can be stopped without deleting its persistent workspace:
+
+```bash
+runpodctl pod stop 2dgw5717mv8ypw
 ```
 
-## Design choices
+To resume the same pod later:
 
-- **Single file to modify.** The agent only touches `train.py`. This keeps the scope manageable and diffs reviewable.
-- **Fixed time budget.** Training always runs for exactly 5 minutes, regardless of your specific platform. This means you can expect approx 12 experiments/hour and approx 100 experiments while you sleep. There are two upsides of this design decision. First, this makes experiments directly comparable regardless of what the agent changes (model size, batch size, architecture, etc). Second, this means that autoresearch will find the most optimal model for your platform in that time budget. The downside is that your runs (and results) become not comparable to other people running on other compute platforms.
-- **Self-contained.** No external dependencies beyond PyTorch and a few small packages. No distributed training, no complex configs. One GPU, one file, one metric.
+```bash
+runpodctl pod start 2dgw5717mv8ypw
+runpodctl pod list
+runpodctl ssh info 2dgw5717mv8ypw
+```
 
-## Platform support
+After a stop/resume, reinstall container-local utilities before launching a new
+session, because packages such as `screen` may not persist across container restarts:
 
-This code currently requires that you have a single NVIDIA GPU. In principle it is quite possible to support CPU, MPS and other platforms but this would also bloat the code. I'm not 100% sure that I want to take this on personally right now. People can reference (or have their agents reference) the full/parent nanochat repository that has wider platform support and shows the various solutions (e.g. a Flash Attention 3 kernels fallback implementation, generic device support, autodetection, etc.), feel free to create forks or discussions for other platforms and I'm happy to link to them here in the README in some new notable forks section or etc.
+```bash
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p <PORT> root@<IP> \
+  'apt-get update && apt-get install -y screen python3-dev'
+```
 
-Seeing as there seems to be a lot of interest in tinkering with autoresearch on much smaller compute platforms than an H100, a few extra words. If you're going to try running autoresearch on smaller computers (Macbooks etc.), I'd recommend one of the forks below. On top of this, here are some recommendations for how to tune the defaults for much smaller models for aspiring forks:
+The tokenizer/data cache under `/root/.cache/autoresearch` may also be absent after
+a stop/resume. Rebuild it before training:
 
-1. To get half-decent results I'd use a dataset with a lot less entropy, e.g. this [TinyStories dataset](https://huggingface.co/datasets/karpathy/tinystories-gpt4-clean). These are GPT-4 generated short stories. Because the data is a lot narrower in scope, you will see reasonable results with a lot smaller models (if you try to sample from them after training).
-2. You might experiment with decreasing `vocab_size`, e.g. from 8192 down to 4096, 2048, 1024, or even - simply byte-level tokenizer with 256 possibly bytes after utf-8 encoding.
-3. In `prepare.py`, you'll want to lower `MAX_SEQ_LEN` a lot, depending on the computer even down to 256 etc. As you lower `MAX_SEQ_LEN`, you may want to experiment with increasing `DEVICE_BATCH_SIZE` in `train.py` slightly to compensate. The number of tokens per fwd/bwd pass is the product of these two.
-4. Also in `prepare.py`, you'll want to decrease `EVAL_TOKENS` so that your validation loss is evaluated on a lot less data.
-5. In `train.py`, the primary single knob that controls model complexity is the `DEPTH` (default 8, here). A lot of variables are just functions of this, so e.g. lower it down to e.g. 4.
-6. You'll want to most likely use `WINDOW_PATTERN` of just "L", because "SSSL" uses alternating banded attention pattern that may be very inefficient for you. Try it.
-7. You'll want to lower `TOTAL_BATCH_SIZE` a lot, but keep it powers of 2, e.g. down to `2**14` (~16K) or so even, hard to tell.
+```bash
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  'cd /workspace/autoresearch && uv run prepare.py'
+```
 
-I think these would be the reasonable hyperparameters to play with. Ask your favorite coding agent for help and copy paste them this guide, as well as the full source code.
+After reconnecting, verify the best state and results:
 
-## Notable forks
+```bash
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p <PORT> root@<IP> \
+  "cd /workspace/autoresearch && git log --oneline --decorate -5 && cat results.tsv"
+```
 
-- [miolini/autoresearch-macos](https://github.com/miolini/autoresearch-macos) (MacOS)
-- [trevin-creator/autoresearch-mlx](https://github.com/trevin-creator/autoresearch-mlx) (MacOS)
-- [jsegov/autoresearch-win-rtx](https://github.com/jsegov/autoresearch-win-rtx) (Windows)
-- [andyluo7/autoresearch](https://github.com/andyluo7/autoresearch) (AMD)
+If the stopped pod is unavailable, create a new GPU pod using the setup instructions
+above, sync the local checkout, run `uv sync`, and run `uv run prepare.py`. The local
+git branch and `results.tsv` are the recovery source of truth; do not start a new
+experiment until the checkout is at the best commit `65adfe4`.
 
-## License
+## Attach to or restart the session
 
-MIT
+Attach interactively:
+
+```bash
+ssh -t -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  'screen -r baseline'
+```
+
+Detach from screen without stopping training: press `Ctrl-A`, then `D`.
+
+If the process has exited and you intentionally want to rerun it:
+
+```bash
+ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 root@103.207.149.105 \
+  "screen -dmS baseline bash -lc 'cd /workspace/autoresearch && uv run train.py > baseline.log 2>&1'"
+```
+
+## Remote project setup
+
+The remote environment was prepared with:
+
+```bash
+apt-get update && apt-get install -y rsync screen python3-dev
+cd /workspace/autoresearch
+uv sync
+uv run prepare.py
+```
+
+`prepare.py` completed successfully and created the data shards and tokenizer under
+`/root/.cache/autoresearch`. The locked environment contains `torch==2.9.1+cu128`.
+
+To sync the current local checkout to a new pod, run locally:
+
+```bash
+rsync -rltvz \
+  -e "ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547 -o StrictHostKeyChecking=no" \
+  --exclude=".git" \
+  --exclude=".venv" \
+  --exclude="__pycache__" \
+  --exclude=".cache" \
+  --exclude=".vscode" \
+  ./ root@103.207.149.105:/workspace/autoresearch/
+```
+
+## RunPod lifecycle and cleanup
+
+Check pod status and current spend:
+
+```bash
+runpodctl pod list
+runpodctl user
+```
+
+Stop billing when the run is complete and any results are copied back:
+
+```bash
+runpodctl pod remove 2dgw5717mv8ypw
+```
+
+Removing the pod is destructive to its remote container and volume. Copy back any
+logs, checkpoints, or modified files first. For example:
+
+```bash
+rsync -avz \
+  -e "ssh -i /home/irom/.runpod/ssh/runpodctl-ssh-key -p 19547" \
+  root@103.207.149.105:/workspace/autoresearch/baseline.log ./
+```
+
+## Provisioning note
+
+The first attempted RTX 6000 Ada pod started correctly, but the default baseline
+hit CUDA OOM during `torch.compile` with only 48 GB VRAM. Two A100 allocations then
+failed before container startup because the selected RunPod hosts reported
+`no space left on device`. Those failed pods were removed. The current H100 pod is
+the successful replacement and matches the project’s documented H100-class setup.

@@ -12,6 +12,7 @@ import gc
 import math
 import time
 from dataclasses import dataclass, asdict
+from pathlib import Path
 
 import torch
 import torch.nn as nn
@@ -24,6 +25,7 @@ repo = "varunneal/flash-attention-3" if cap == (9, 0) else "kernels-community/fl
 fa3 = get_kernel(repo).flash_attn_interface
 
 from prepare import MAX_SEQ_LEN, TIME_BUDGET, Tokenizer, make_dataloader, evaluate_bpb
+from checkpointing import save_checkpoint
 
 # ---------------------------------------------------------------------------
 # GPT Model
@@ -442,7 +444,7 @@ MATRIX_LR = 0.04        # learning rate for matrix parameters (Muon)
 SCALAR_LR = 0.5         # learning rate for per-layer scalars (Adam)
 WEIGHT_DECAY = 0.2      # cautious weight decay for Muon
 ADAM_BETAS = (0.8, 0.95) # Adam beta1, beta2
-WARMUP_RATIO = 0.0      # fraction of time budget for LR warmup
+WARMUP_RATIO = 0.1      # fraction of time budget for LR warmup
 WARMDOWN_RATIO = 0.5    # fraction of time budget for LR warmdown
 FINAL_LR_FRAC = 0.0     # final LR as fraction of initial
 
@@ -628,3 +630,35 @@ print(f"total_tokens_M:   {total_tokens / 1e6:.1f}")
 print(f"num_steps:        {step}")
 print(f"num_params_M:     {num_params / 1e6:.1f}")
 print(f"depth:            {DEPTH}")
+
+checkpoint_metadata = {
+    "val_bpb": float(val_bpb),
+    "training_seconds": float(total_training_time),
+    "total_seconds": float(t_end - t_start),
+    "peak_vram_mb": float(peak_vram_mb),
+    "mfu_percent": float(steady_state_mfu),
+    "total_tokens_M": float(total_tokens / 1e6),
+    "num_steps": int(step),
+    "num_params_M": float(num_params / 1e6),
+    "depth": int(DEPTH),
+    "commit": os.getenv("AUTORESEARCH_COMMIT", "unknown"),
+    "model_config": asdict(config),
+}
+checkpoint_path = save_checkpoint(
+    Path(os.getenv("AUTORESEARCH_CHECKPOINT_DIR", "checkpoints")) / "candidate.pt",
+    model,
+    checkpoint_metadata,
+)
+print(f"checkpoint_path: {checkpoint_path}")
+
+if os.getenv("AUTORESEARCH_PUBLISH") == "1":
+    from publish_best import publish_checkpoint
+
+    try:
+        publish_checkpoint(
+            checkpoint_path,
+            repo_id=os.getenv("HF_REPO_ID", "niuk77/autoresearch"),
+            token=os.getenv("HF_TOKEN"),
+        )
+    except Exception as exc:
+        print(f"publish_error: {exc}")
