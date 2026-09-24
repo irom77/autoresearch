@@ -25,3 +25,4 @@ results.tsv
 checkpoints/
 nanochat_export/
 runs/
+.vscode/
