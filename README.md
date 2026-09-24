@@ -71,6 +71,26 @@ evaluation is available, add its CORE score and retain the same run identity;
 do not substitute CORE for `val_bpb` or compare this single-GPU table directly
 with nanochat's 8×H100 leaderboard.
 
+### Upstream nanochat reference
+
+The following is a dated snapshot of the upstream [nanochat Time-to-GPT-2
+Leaderboard](https://github.com/irom77/nanochat/blob/master/README_original.md),
+included for lineage and calibration. These rows are not local autoresearch
+runs and are not ranked with the table above. The upstream benchmark measures
+wall-clock time on an 8×H100 node until the GPT-2 CORE target is exceeded.
+
+Snapshot: 2026-09-24.
+
+| # | time | val_bpb | CORE | Description | Date | Commit | Contributors |
+|---:|---:|---:|---:|---|---|---|---|
+| 0 | 168 h | — | 0.2565 | Original OpenAI GPT-2 checkpoint | 2019 | — | OpenAI |
+| 1 | 3.04 h | 0.74833 | 0.2585 | d24 baseline, slightly overtrained | Jan 29 2026 | `348fbb3` | @karpathy |
+| 2 | 2.91 h | 0.74504 | 0.2578 | d26 slightly undertrained +fp8 | Feb 2 2026 | `a67eba3` | @karpathy |
+| 3 | 2.76 h | 0.74645 | 0.2602 | Bump total batch size to 1M tokens | Feb 5 2026 | `2c062aa` | @karpathy |
+| 4 | 2.02 h | 0.71854 | 0.2571 | Change dataset to NVIDIA ClimbMix | Mar 4 2026 | `324e69c` | @ddudek @karpathy |
+| 5 | 1.80 h | 0.71808 | 0.2690 | autoresearch round 1 | Mar 9 2026 | `6ed7d1d` | @karpathy |
+| 6 | 1.65 h | 0.71800 | 0.2626 | autoresearch round 2 | Mar 14 2026 | `a825e63` | @karpathy |
+
 ### Stopping and finalization
 
 Continue while experiments produce useful improvements and the two-hour daily
