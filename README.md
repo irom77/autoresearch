@@ -311,27 +311,32 @@ with the command above. Never commit the token or place it in this runbook.
 - After the session, the local checkpoint and metadata were uploaded to
   `https://huggingface.co/niuk77/autoresearch`, and the model card was added.
 
-### Deferred tokenizer recovery
+### Recovered tokenizer and evaluation status
 
-The model uses a custom 8,192-token tokenizer. The original tokenizer cache was
-not copied before the pod was removed, and the pod could not be restarted because
-RunPod had no available H100 on that host. Do not use nanochat's default tokenizer
-with this model.
+The model uses a custom 8,192-token tokenizer. It has now been regenerated from
+the pinned dataset preparation process, sanity-checked, copied locally, and
+uploaded to the Hub at `tokenizer/tokenizer.pkl` together with
+`tokenizer/token_bytes.pt`. Do not use nanochat's default tokenizer with this
+model.
 
-When budget is available, create a new pod or use a local machine and run:
+The recovery command was:
 
 ```bash
 cd /workspace/autoresearch
 uv run prepare.py
 ```
 
-Copy `~/.cache/autoresearch/tokenizer/tokenizer.pkl` locally, verify its vocabulary
-size is 8,192, and upload it to the Hub as `tokenizer/tokenizer.pkl` in
-`niuk77/autoresearch`. The repository now includes the pinned compatibility layer
-under `vendor/nanochat_compat/`, copied from nanochat revision `e85db6b`; use its
-`load_model.py` loader for the exported native checkpoint. The current H100 pod no
-longer exists; provision a new pod and run the normal setup/monitoring steps if
-GPU inference or additional experiments are needed.
+The repository includes the pinned compatibility layer under
+`vendor/nanochat_compat/`, copied from nanochat revision `e85db6b`; its
+`load_model.py` loader strictly loaded all `50,332,176` exported parameters on
+the A40 evaluation pod. A reproducible base-model probe is in
+`evaluate_chat.py`, with results in `runs/chat_eval_2026-09-25.log`. Because the
+artifact is pretraining-only and the autoresearch tokenizer has reserved tokens
+rather than nanochat's chat-control tokens, the probe uses plain completion and
+`User:/Assistant:` text prompting. It is not an SFT/chat-quality evaluation.
+
+The full nanochat CORE/task evaluation remains pending until the matching
+nanochat evaluation scripts are available alongside this compatibility layer.
 
 ### Pause and resume later
 
