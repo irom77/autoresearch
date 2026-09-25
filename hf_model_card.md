@@ -66,6 +66,19 @@ all 22 tasks, using 100 examples per task. The audit log is in
 `runs/core_eval_2026-09-25.log`. This is not directly comparable to the
 official nanochat leaderboard, which uses full task data and multi-GPU runs.
 
+## SFT derivative
+
+The repository also contains a separate tokenizer-preserving SFT derivative at
+`sft/autoresearch-sft.pt`. It was trained for 500 steps on 256 streamed
+conversations from `HuggingFaceH4/ultrachat_200k` (`train_sft`), with batch size
+2, learning rate `2e-5`, and 1,041,840 supervised tokens. It retains the same
+8,192-token vocabulary and base architecture.
+
+The deterministic plain-text chat probe is recorded in
+`runs/sft_chat_eval_2026-09-25.json`. The SFT model is more task-directed than
+the base probe but remains repetitive; this is a small SFT demonstration, not
+a claim of production conversational quality.
+
 ## License
 
 See the source project for licensing and dataset terms.

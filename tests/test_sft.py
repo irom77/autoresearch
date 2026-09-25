@@ -49,3 +49,15 @@ def test_build_batch_pads_inputs_and_labels():
     assert inputs.shape == labels.shape
     assert inputs.shape[0] == 2
     assert (labels == -100).any()
+
+
+def test_build_batch_truncates_to_context_length():
+    inputs, labels = build_batch(
+        [[{"role": "user", "content": "A"}, {"role": "assistant", "content": "B"}]],
+        FakeTokenizer(),
+        "cpu",
+        max_length=3,
+    )
+
+    assert inputs.shape == (1, 3)
+    assert labels.shape == (1, 3)

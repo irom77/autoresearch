@@ -68,6 +68,7 @@ def train_sft(
     batch_size: int,
     learning_rate: float,
     seed: int,
+    max_seq_len: int | None = None,
 ) -> tuple[int, int, float]:
     if steps <= 0 or batch_size <= 0:
         raise ValueError("steps and batch_size must be positive")
@@ -79,7 +80,7 @@ def train_sft(
     final_loss = float("nan")
     for step in range(steps):
         batch = [conversations[(step * batch_size + i) % len(conversations)] for i in range(batch_size)]
-        input_ids, labels = build_batch(batch, tokenizer, device)
+        input_ids, labels = build_batch(batch, tokenizer, device, max_length=max_seq_len)
         logits = model(input_ids)
         loss = F.cross_entropy(
             logits[:, :-1].reshape(-1, logits.size(-1)),
@@ -115,7 +116,15 @@ def main() -> None:
     tokenizer = Tokenizer.from_directory(args.tokenizer_dir)
     conversations = _load_conversations(args.data)
     steps, train_tokens, final_loss = train_sft(
-        model, tokenizer, conversations, device, args.steps, args.batch_size, args.learning_rate, args.seed
+        model,
+        tokenizer,
+        conversations,
+        device,
+        args.steps,
+        args.batch_size,
+        args.learning_rate,
+        args.seed,
+        max_seq_len=base_metadata["model_config"]["sequence_len"],
     )
     metadata = {
         "format": "autoresearch-sft-v1",

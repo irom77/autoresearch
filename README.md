@@ -366,6 +366,25 @@ PYTHONPATH=vendor/nanochat_compat uv run python evaluate_core.py \
 The result was CORE `0.058873` across all 22 tasks. It must not be compared
 directly with nanochat's official full-data, multi-GPU leaderboard scores.
 
+### SFT chat derivative
+
+The base model now has a separate tokenizer-preserving SFT derivative. It uses
+plain `User:`/`Assistant:` text because the autoresearch tokenizer does not
+contain nanochat's chat-control tokens.
+
+- Hub artifact: `niuk77/autoresearch/sft/autoresearch-sft.pt`
+- Dataset: 256 streamed conversations from `HuggingFaceH4/ultrachat_200k`,
+  `train_sft`
+- Training: 500 steps, batch size 2, learning rate `2e-5`, 1,041,840 masked
+  assistant tokens, final loss `2.039`
+- Probe: [`runs/sft_chat_eval_2026-09-25.json`](runs/sft_chat_eval_2026-09-25.json)
+- Base comparison: [`runs/base_chat_eval_2026-09-25.log`](runs/base_chat_eval_2026-09-25.log)
+
+The SFT responses are more task-directed but still repetitive. This is a
+small demonstration and is not an official nanochat chat evaluation.
+The RunPod B300 MIG pod used for this run was removed after artifact recovery;
+current RunPod spend is `$0/hr`.
+
 ### Pause and resume later
 
 The pod can be stopped without deleting its persistent workspace:

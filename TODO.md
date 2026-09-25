@@ -17,8 +17,8 @@ recovery commands.
 
 - [x] Run a short scripted completion/chat-style probe using the trained base model in the pod.
 - [x] Save prompts, responses, device, model revision, tokenizer vocabulary, timing, and VRAM under `runs/chat_eval_2026-09-25.log`.
-- [ ] Add chat fine-tuning/SFT before judging conversational quality; the current artifact is a base model.
-- [ ] Monitor the session with SSH, `screen`, logs, and `nvidia-smi` as documented in `README.md`.
+- [x] Add a separate tokenizer-preserving SFT derivative before judging conversational quality.
+- [x] Record deterministic SFT and base comparison probes with SSH/screen logs.
 
 ## Nanochat-style evaluation
 
@@ -26,7 +26,7 @@ recovery commands.
 - [x] Record the checkpoint's validation BPB, generation samples, throughput, and GPU memory in the recovered-model probe log.
 - [ ] Compare task scores with a corresponding nanochat baseline using identical tokenizer and evaluation settings.
 - [x] Update `README.md` with the reproducible command, scope, and result.
-- [ ] Update the Hub model card with the CORE diagnostic result.
+- [x] Update the Hub model card with the CORE diagnostic result and SFT derivative.
 
 ## Done when
 

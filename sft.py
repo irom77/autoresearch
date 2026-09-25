@@ -50,14 +50,21 @@ def build_batch(
     conversations: list[list[dict[str, str]]],
     tokenizer: TokenizerLike,
     device: str | torch.device,
+    max_length: int | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Render conversations into right-padded input and masked-label tensors."""
     rendered = [render_conversation(conversation, tokenizer) for conversation in conversations]
-    max_length = max(len(input_ids) for input_ids, _ in rendered)
+    if max_length is not None and max_length <= 0:
+        raise ValueError("max_length must be positive")
+    target_length = max(len(input_ids) for input_ids, _ in rendered)
+    if max_length is not None:
+        target_length = min(target_length, max_length)
     pad_id = tokenizer.get_bos_token_id()
     input_rows, label_rows = [], []
     for input_ids, labels in rendered:
-        padding = max_length - len(input_ids)
+        input_ids = input_ids[-target_length:]
+        labels = labels[-target_length:]
+        padding = target_length - len(input_ids)
         input_rows.append(input_ids + [pad_id] * padding)
         label_rows.append(labels + [-100] * padding)
     return (
