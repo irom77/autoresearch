@@ -11,6 +11,15 @@ tags:
 This repository contains the best saved checkpoint produced during the
 2026-09-24 RunPod experiment window for the autoresearch project.
 
+## Relationship to nanochat
+
+This is an autoresearch-trained model, not a new nanochat implementation.
+Autoresearch supplied the training loop, experiment changes, checkpoint, and
+custom tokenizer. Nanochat revision `e85db6b` supplied the compatible GPT
+architecture reference and native checkpoint layout used to export and load
+the model. The model was therefore packaged for nanochat compatibility; it did
+not build or replace nanochat itself.
+
 ## Model
 
 - Architecture: compact GPT-style language model
@@ -65,6 +74,25 @@ CORE evaluator produced a bounded diagnostic CORE score of `0.058873` across
 all 22 tasks, using 100 examples per task. The audit log is in
 `runs/core_eval_2026-09-25.log`. This is not directly comparable to the
 official nanochat leaderboard, which uses full task data and multi-GPU runs.
+
+## Comparison with the earlier nanochat build
+
+There is currently no evidence that this model is better than the earlier
+nanochat build. The numbers are not an apples-to-apples comparison:
+
+- This checkpoint is a 50.3M-parameter, 300-second autoresearch experiment
+  with recorded `val_bpb=1.012760` (`1.004616` was a better run whose weights
+  were not saved).
+- The recorded CORE value here (`0.058873`) uses 100 examples per task and a
+  single B300 MIG GPU; it is explicitly a diagnostic, not an official
+  nanochat leaderboard score.
+- Nanochat leaderboard results use different training runs, datasets,
+  evaluation scope, and multi-GPU hardware.
+
+The only supported conclusion is that the autoresearch checkpoint is
+nanochat-architecture-compatible and reproducibly loadable. A claim that it
+outperforms the earlier nanochat build requires matching model size, data,
+training budget, tokenizer, and full evaluation protocol.
 
 ## SFT derivative
 
