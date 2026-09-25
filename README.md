@@ -79,7 +79,9 @@ included for lineage and calibration. These rows are not local autoresearch
 runs and are not ranked with the table above. The upstream benchmark measures
 wall-clock time on an 8×H100 node until the GPT-2 CORE target is exceeded.
 
-Snapshot: 2026-09-24.
+Verified: 2026-09-25 against upstream `README_original.md` at nanochat
+`master` revision `d05bd40`. The rows below are unchanged from that current
+upstream source; this section is a dated reference snapshot, not local runs.
 
 | # | time | val_bpb | CORE | Description | Date | Commit | Contributors |
 |---:|---:|---:|---:|---|---|---|---|
