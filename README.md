@@ -123,6 +123,15 @@ plateaus, or when the human requests a stop. Before stopping:
 - Experiment time limit today: `2 hours` (`2026-09-24 16:54:51 UTC`)
 - Approximate experiment time used today: `~1 hour 39 minutes`; pod stopped before the 2-hour limit
 
+### Latest recovery session: 2026-09-25
+
+- Pod: `mpi1krf4xgs1le` (secure A40, `$0.49/hr`)
+- Purpose: regenerate and archive the exact tokenizer, verify the native export, and run a base-model probe
+- Result: tokenizer vocabulary `8,192`; strict loader matched `50,332,176` parameters
+- Probe: [`runs/chat_eval_2026-09-25.log`](runs/chat_eval_2026-09-25.log) — model revision `25196ee`, recorded `val_bpb=1.012760`
+- Preparation audit: [`runs/prepare_2026-09-25.log`](runs/prepare_2026-09-25.log)
+- Pod state: removed after artifact recovery; RunPod spend is currently `$0/hr`
+
 ## Cost choice
 
 The live `runpodctl gpu list` check showed these relevant rates:
@@ -334,6 +343,12 @@ the A40 evaluation pod. A reproducible base-model probe is in
 artifact is pretraining-only and the autoresearch tokenizer has reserved tokens
 rather than nanochat's chat-control tokens, the probe uses plain completion and
 `User:/Assistant:` text prompting. It is not an SFT/chat-quality evaluation.
+
+To repeat the probe after provisioning a pod and recovering the tokenizer cache:
+
+```bash
+PYTHONPATH=vendor/nanochat_compat uv run python evaluate_chat.py
+```
 
 The full nanochat CORE/task evaluation remains pending until the matching
 nanochat evaluation scripts are available alongside this compatibility layer.
