@@ -130,6 +130,9 @@ plateaus, or when the human requests a stop. Before stopping:
 - Result: tokenizer vocabulary `8,192`; strict loader matched `50,332,176` parameters
 - Probe: [`runs/chat_eval_2026-09-25.log`](runs/chat_eval_2026-09-25.log) — model revision `25196ee`, recorded `val_bpb=1.012760`
 - Preparation audit: [`runs/prepare_2026-09-25.log`](runs/prepare_2026-09-25.log)
+- CORE diagnostic: [`runs/core_eval_2026-09-25.log`](runs/core_eval_2026-09-25.log)
+- CORE result: `0.058873`, all 22 tasks, 100 examples per task; this is a
+  bounded diagnostic pass, not an official full-data leaderboard score
 - Pod state: removed after artifact recovery; RunPod spend is currently `$0/hr`
 
 ## Cost choice
@@ -350,8 +353,18 @@ To repeat the probe after provisioning a pod and recovering the tokenizer cache:
 PYTHONPATH=vendor/nanochat_compat uv run python evaluate_chat.py
 ```
 
-The full nanochat CORE/task evaluation remains pending until the matching
-nanochat evaluation scripts are available alongside this compatibility layer.
+The pinned CORE evaluator is now reproducible with `evaluate_core.py`. It uses
+nanochat revision `e85db6b` from a disposable checkout, the exact recovered
+tokenizer, and the exported base checkpoint. The recorded bounded diagnostic
+command was:
+
+```bash
+PYTHONPATH=vendor/nanochat_compat uv run python evaluate_core.py \
+  --nanochat-source /workspace/nanochat-eval --max-per-task 100
+```
+
+The result was CORE `0.058873` across all 22 tasks. It must not be compared
+directly with nanochat's official full-data, multi-GPU leaderboard scores.
 
 ### Pause and resume later
 

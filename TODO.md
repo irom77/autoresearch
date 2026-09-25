@@ -22,10 +22,11 @@ recovery commands.
 
 ## Nanochat-style evaluation
 
-- [ ] Run nanochat’s full base-model evaluation scripts against the exported checkpoint. The current repository has only the pinned compatibility loader, so this requires vendoring or provisioning the matching nanochat evaluation scripts.
+- [x] Run the pinned nanochat CORE evaluator against the exported checkpoint; the bounded 100-example-per-task diagnostic produced CORE `0.058873` across all 22 tasks.
 - [x] Record the checkpoint's validation BPB, generation samples, throughput, and GPU memory in the recovered-model probe log.
 - [ ] Compare task scores with a corresponding nanochat baseline using identical tokenizer and evaluation settings.
-- [ ] Update the Hub model card and `README.md` with reproducible commands and results.
+- [x] Update `README.md` with the reproducible command, scope, and result.
+- [ ] Update the Hub model card with the CORE diagnostic result.
 
 ## Done when
 
