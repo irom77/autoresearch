@@ -2,6 +2,9 @@
 
 > Original project documentation: [PROJECT_README.md](PROJECT_README.md)
 
+New to this project? Start with the [beginner's guide](BEGINNER_GUIDE.md) for
+an explanation of autoresearch, the experiment loop, and the important files.
+
 
 This repository is running autoresearch experiments on a RunPod H100. The best
 benchmark result is `val_bpb=1.004616` from commit `65adfe4`. The pod was
