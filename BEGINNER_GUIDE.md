@@ -28,6 +28,27 @@ Training repeats this process over many examples. When the model guesses badly,
 the training code adjusts its internal numbers, called **parameters**, so that
 similar guesses are more likely to be correct next time.
 
+## What model is trained here?
+
+The initial model in this repository is a small, decoder-only GPT-style
+Transformer: roughly **50 million parameters**, with 8 Transformer layers, a
+2,048-token context window, and an 8,192-token BPE tokenizer. It is small
+compared with modern production LLMs, which makes experiments possible on one
+GPU and keeps each run short.
+
+The training stage is **pre-training**, specifically causal language-model
+pre-training. The model reads ordinary text from the
+`karpathy/climbmix-400b-shuffle` dataset and learns to predict the next token.
+The training objective is not to answer questions or follow a conversation yet;
+it is to learn general language patterns such as spelling, syntax, facts, and
+text continuation.
+
+This is therefore not supervised fine-tuning (SFT), instruction tuning, or
+RLHF. Those are later stages that can teach a pre-trained model to follow
+instructions, behave like a chat assistant, or prefer certain answers. The
+autoresearch loop in this repository initially searches for better ways to do
+this base-model pre-training.
+
 ## The experiment loop
 
 Each experiment is deliberately small and repeatable. The agent changes one
